@@ -8,3 +8,6 @@ dmypy.json
 # appmap
 appmap.yml
 /tmp
+
+# vscode
+.vscode/
