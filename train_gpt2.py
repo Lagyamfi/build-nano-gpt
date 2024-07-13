@@ -1,3 +1,4 @@
+import tiktoken
 import math
 from dataclasses import dataclass
 import torch
@@ -87,7 +88,8 @@ class GPT(nn.Module):
         self.transformer = nn.ModuleDict(dict(
                 wte=nn.Embedding(config.vocab_size, config.n_embd),
                 wpe=nn.Embedding(config.block_size, config.n_embd),
-                h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
+                h=nn.ModuleList([Block(config)
+                                for _ in range(config.n_layer)]),
                 ln_f=nn.LayerNorm(config.n_embd),
             ))
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
@@ -119,12 +121,17 @@ class GPT(nn.Module):
         # n_layer, n_head and n_embd are determined from the model_type
         config_args = {
             "gpt2": dict(n_layer=12, n_head=12, n_embd=768),  # 124M params
-            "gpt2-medium": dict(n_layer=24, n_head=16, n_embd=1024),  # 345M params
-            "gpt2-large": dict(n_layer=36, n_head=20, n_embd=1280),  # 774M params
-            "gpt2-xl": dict(n_layer=48, n_head=25, n_embd=1600),  # 1558M params
+            # 345M params
+            "gpt2-medium": dict(n_layer=24, n_head=16, n_embd=1024),
+            # 774M params
+            "gpt2-large": dict(n_layer=36, n_head=20, n_embd=1280),
+            # 1558M params
+            "gpt2-xl": dict(n_layer=48, n_head=25, n_embd=1600),
         }[model_type]
-        config_args["vocab_size"] = 50257  # always 50257 for GPT model checkpoints
-        config_args["block_size"] = 1024  # always 1024 for GPT model checkpoints
+        # always 50257 for GPT model checkpoints
+        config_args["vocab_size"] = 50257
+        # always 1024 for GPT model checkpoints
+        config_args["block_size"] = 1024
         # create a from-scratch initialized minGPT model
         config = GPTConfig(**config_args)
         model = GPT(config)
