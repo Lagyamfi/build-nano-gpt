@@ -1,4 +1,3 @@
-import tiktoken
 import math
 from dataclasses import dataclass
 import torch
@@ -88,8 +87,7 @@ class GPT(nn.Module):
         self.transformer = nn.ModuleDict(dict(
                 wte=nn.Embedding(config.vocab_size, config.n_embd),
                 wpe=nn.Embedding(config.block_size, config.n_embd),
-                h=nn.ModuleList([Block(config)
-                                for _ in range(config.n_layer)]),
+                h=nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
                 ln_f=nn.LayerNorm(config.n_embd),
             ))
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
@@ -121,17 +119,12 @@ class GPT(nn.Module):
         # n_layer, n_head and n_embd are determined from the model_type
         config_args = {
             "gpt2": dict(n_layer=12, n_head=12, n_embd=768),  # 124M params
-            # 345M params
-            "gpt2-medium": dict(n_layer=24, n_head=16, n_embd=1024),
-            # 774M params
-            "gpt2-large": dict(n_layer=36, n_head=20, n_embd=1280),
-            # 1558M params
-            "gpt2-xl": dict(n_layer=48, n_head=25, n_embd=1600),
+            "gpt2-medium": dict(n_layer=24, n_head=16, n_embd=1024),  # 345M params
+            "gpt2-large": dict(n_layer=36, n_head=20, n_embd=1280),  # 774M params
+            "gpt2-xl": dict(n_layer=48, n_head=25, n_embd=1600),  # 1558M params
         }[model_type]
-        # always 50257 for GPT model checkpoints
-        config_args["vocab_size"] = 50257
-        # always 1024 for GPT model checkpoints
-        config_args["block_size"] = 1024
+        config_args["vocab_size"] = 50257  # always 50257 for GPT model checkpoints
+        config_args["block_size"] = 1024  # always 1024 for GPT model checkpoints
         # create a from-scratch initialized minGPT model
         config = GPTConfig(**config_args)
         model = GPT(config)
@@ -173,18 +166,34 @@ if torch.cuda.is_available():
 elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     device = "mps"
 print(f"using device: {device}")
+device = "cpu" # OVERRIDE
 
-num_return_sequences = 5
-max_length = 30
-
-model = GPT.from_pretrained("gpt2")
-model.eval()
-model.to(device)
-
-# prefix token
+# get a data batch
 import tiktoken
 enc = tiktoken.get_encoding('gpt2')
-tokens = enc.encode("Hello, I am a language model,")
+with open('input.txt', 'r') as f:
+    text = f.read()
+text = text[:1000]
+tokens = enc.encode(text)
+B, T = 4, 32
+buf = torch.tensor(tokens[:B*T + 1])
+x = buf[:-1].view(B, T)
+y = buf[1:].view(B, T)
+
+# get logits
+model = GPT(GPTConfig())
+
+model.to(device)
+logits = model(x)
+
+print(logits.shape)
+import sys; sys.exit(0)
+
+# prefix tokens
+model.eval()
+num_return_sequences = 5
+max_length = 30
+tokens = enc.encode("Hello, I'm a language model,")
 tokens = torch.tensor(tokens, dtype=torch.long) # (8,)
 tokens = tokens.unsqueeze(0).repeat(num_return_sequences, 1) # (5, 8)
 x = tokens.to(device)
